@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, IBM_Plex_Mono } from "next/font/google";
+import { Manrope, JetBrains_Mono } from "next/font/google";
 import { AppNav } from "@/components/app-nav";
 import "./globals.css";
 
-const headingFont = Space_Grotesk({
-  variable: "--font-heading",
+const headingFont = Manrope({
+  variable: "--font-sans",
   subsets: ["latin"],
+  weight: ["500", "600", "700", "800"],
 });
 
-const bodyFont = IBM_Plex_Mono({
-  variable: "--font-body",
+const bodyFont = JetBrains_Mono({
+  variable: "--font-mono",
   subsets: ["latin"],
   weight: ["400", "500"],
 });
@@ -26,7 +27,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${headingFont.variable} ${bodyFont.variable}`}>
-      <body>
+      <body className="theme-catppuccin">
         <AppNav />
         <main className="shell">{children}</main>
       </body>

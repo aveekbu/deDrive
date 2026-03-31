@@ -32,6 +32,8 @@ export function calculateProgressStats(
 type ProgressState = {
   attempts: UserAttempt[];
   spacedRepetition: Record<string, SpacedRepetitionData>;
+  hasHydrated: boolean;
+  hydrate: () => void;
   addAttempt: (attempt: UserAttempt) => void;
   clearProgress: () => void;
   getStats: () => ProgressStats;
@@ -39,18 +41,23 @@ type ProgressState = {
 
 const STORAGE_KEY = "ddt-progress-v1";
 
-const initialSnapshot = readStorage<ProgressSnapshot>(STORAGE_KEY, {
+const EMPTY_SNAPSHOT: ProgressSnapshot = {
   attempts: [],
   spacedRepetition: {},
-});
+};
 
 function persist(snapshot: ProgressSnapshot): void {
   writeStorage(STORAGE_KEY, snapshot);
 }
 
 export const useProgressStore = create<ProgressState>((set, get) => ({
-  attempts: initialSnapshot.attempts,
-  spacedRepetition: initialSnapshot.spacedRepetition,
+  attempts: EMPTY_SNAPSHOT.attempts,
+  spacedRepetition: EMPTY_SNAPSHOT.spacedRepetition,
+  hasHydrated: false,
+  hydrate: () => {
+    const snapshot = readStorage<ProgressSnapshot>(STORAGE_KEY, EMPTY_SNAPSHOT);
+    set({ attempts: snapshot.attempts, spacedRepetition: snapshot.spacedRepetition, hasHydrated: true });
+  },
   addAttempt: (attempt) => {
     const { attempts, spacedRepetition } = get();
     const updatedSr = scheduleReview(attempt.questionId, attempt.isCorrect, spacedRepetition[attempt.questionId]);

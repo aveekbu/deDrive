@@ -6,15 +6,20 @@ import type { Language } from "@/lib/types";
 
 type SettingsState = {
   language: Language;
+  hasHydrated: boolean;
+  hydrate: () => void;
   setLanguage: (language: Language) => void;
 };
 
 const STORAGE_KEY = "ddt-settings-v1";
 
-const persisted = readStorage<{ language: Language }>(STORAGE_KEY, { language: "en" });
-
 export const useSettingsStore = create<SettingsState>((set) => ({
-  language: persisted.language,
+  language: "en",
+  hasHydrated: false,
+  hydrate: () => {
+    const persisted = readStorage<{ language: Language }>(STORAGE_KEY, { language: "en" });
+    set({ language: persisted.language, hasHydrated: true });
+  },
   setLanguage: (language) => {
     writeStorage(STORAGE_KEY, { language });
     set({ language });

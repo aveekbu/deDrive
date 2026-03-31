@@ -1,11 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { getThemeNumbers } from "@/lib/question-loader";
+import { getQuestionById, getThemeSummaries } from "@/lib/question-loader";
 import { QuestionCard } from "@/components/question-card";
 import { useProgressStore } from "@/store/progress-store";
 import { useQuizStore } from "@/store/quiz-store";
 import { useSettingsStore } from "@/store/settings-store";
+import type { Language, Question } from "@/lib/types";
 
 function asSet(items: string[]): Set<string> {
   return new Set(items.sort());
@@ -25,16 +27,51 @@ function setsEqual(left: Set<string>, right: Set<string>): boolean {
   return true;
 }
 
+function isLanguage(value: string | null): value is Language {
+  return value === "en" || value === "de";
+}
+
 export function QuizPanel() {
   const { language } = useSettingsStore();
-  const themes = getThemeNumbers(language);
+  const themes = getThemeSummaries(language);
 
   const { questions, index, startedAt, filters, setFilters, startQuiz, nextQuestion, resetQuiz } = useQuizStore();
   const addAttempt = useProgressStore((state) => state.addAttempt);
 
   const current = questions[index];
+  const [reviewQuestion, setReviewQuestion] = useState<Question | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [revealed, setRevealed] = useState(false);
+
+  const activeQuestion = reviewQuestion ?? current;
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const requestedTheme = params.get("theme");
+    if (!requestedTheme || filters.themeNumber === requestedTheme) {
+      return;
+    }
+
+    setFilters({ ...filters, themeNumber: requestedTheme });
+  }, [filters, setFilters]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const reviewQuestionId = params.get("review");
+    if (!reviewQuestionId) {
+      if (reviewQuestion) {
+        setReviewQuestion(null);
+      }
+      return;
+    }
+
+    const requestedLanguage = params.get("lang");
+    const lookupLanguage = isLanguage(requestedLanguage) ? requestedLanguage : language;
+    const question = getQuestionById(reviewQuestionId, lookupLanguage) ?? null;
+    setReviewQuestion(question);
+    setSelected([]);
+    setRevealed(false);
+  }, [language, reviewQuestion]);
 
   useEffect(() => {
     if (questions.length === 0) {
@@ -65,19 +102,19 @@ export function QuizPanel() {
   }
 
   function submitAnswer(): void {
-    if (!current || selected.length === 0 || revealed) {
+    if (!activeQuestion || selected.length === 0 || revealed) {
       return;
     }
 
-    const correctIds = current.options.filter((item) => item.isCorrect).map((item) => item.id);
+    const correctIds = activeQuestion.options.filter((item) => item.isCorrect).map((item) => item.id);
     const isCorrect = setsEqual(asSet(selected), asSet(correctIds));
 
     addAttempt({
-      id: `${Date.now()}-${current.id}`,
-      questionId: current.id,
-      questionText: current.text,
-      themeNumber: current.themeNumber,
-      language: current.language,
+      id: `${Date.now()}-${activeQuestion.id}`,
+      questionId: activeQuestion.id,
+      questionText: activeQuestion.text,
+      themeNumber: activeQuestion.themeNumber,
+      language: activeQuestion.language,
       selectedOptionIds: selected,
       correctOptionIds: correctIds,
       isCorrect,
@@ -89,6 +126,12 @@ export function QuizPanel() {
   }
 
   function goNext(): void {
+    if (reviewQuestion) {
+      setSelected([]);
+      setRevealed(false);
+      return;
+    }
+
     setSelected([]);
     setRevealed(false);
     nextQuestion();
@@ -115,8 +158,8 @@ export function QuizPanel() {
             >
               <option value="">All themes</option>
               {themes.map((theme) => (
-                <option key={theme} value={theme}>
-                  {theme}
+                <option key={theme.themeNumber} value={theme.themeNumber}>
+                  {theme.themeName} ({theme.themeNumber})
                 </option>
               ))}
             </select>
@@ -169,16 +212,32 @@ export function QuizPanel() {
         </div>
       </article>
 
-      {current ? (
+      {activeQuestion ? (
         <>
-          <QuestionCard question={current} selected={selected} revealed={revealed} onToggle={toggleOption} />
+          {reviewQuestion ? (
+            <article className="card" style={{ background: "#f6f9ff" }}>
+              <h3 style={{ marginBottom: "0.35rem" }}>Review Mode</h3>
+              <p className="muted">This question was opened from your recent attempts so you can revisit it directly.</p>
+              <Link href="/progress" className="button secondary" style={{ display: "inline-block", marginTop: "0.8rem" }}>
+                Back to Progress
+              </Link>
+            </article>
+          ) : null}
+
+          <QuestionCard question={activeQuestion} selected={selected} revealed={revealed} onToggle={toggleOption} />
           <article className="card" style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
             <button className="button primary" onClick={submitAnswer} disabled={selected.length === 0 || revealed}>
               Check Answer
             </button>
-            <button className="button secondary" onClick={goNext} disabled={!revealed || index === questions.length - 1}>
-              Next Question
-            </button>
+            {reviewQuestion ? (
+              <button className="button secondary" onClick={goNext} disabled={!revealed}>
+                Retry Question
+              </button>
+            ) : (
+              <button className="button secondary" onClick={goNext} disabled={!revealed || index === questions.length - 1}>
+                Next Question
+              </button>
+            )}
           </article>
         </>
       ) : (

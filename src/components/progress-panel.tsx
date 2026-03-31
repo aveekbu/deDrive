@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo } from "react";
+import { getQuestionById } from "@/lib/question-loader";
 import { calculateProgressStats, useProgressStore } from "@/store/progress-store";
 
 export function ProgressPanel() {
@@ -9,10 +11,12 @@ export function ProgressPanel() {
   const stats = useMemo(() => calculateProgressStats(attempts, spacedRepetition), [attempts, spacedRepetition]);
 
   const groupedByTheme = useMemo(() => {
-    const map = new Map<string, { total: number; correct: number }>();
+    const map = new Map<string, { total: number; correct: number; name: string }>();
 
     attempts.forEach((attempt) => {
-      const existing = map.get(attempt.themeNumber) ?? { total: 0, correct: 0 };
+      const fallbackName = attempt.themeNumber;
+      const resolvedName = getQuestionById(attempt.questionId, attempt.language)?.themeName ?? fallbackName;
+      const existing = map.get(attempt.themeNumber) ?? { total: 0, correct: 0, name: resolvedName };
       existing.total += 1;
       if (attempt.isCorrect) {
         existing.correct += 1;
@@ -20,7 +24,7 @@ export function ProgressPanel() {
       map.set(attempt.themeNumber, existing);
     });
 
-    return [...map.entries()].slice(0, 12);
+    return [...map.entries()].sort((left, right) => right[1].total - left[1].total).slice(0, 12);
   }, [attempts]);
 
   return (
@@ -60,7 +64,9 @@ export function ProgressPanel() {
 
               return (
                 <div key={theme} style={{ display: "flex", justifyContent: "space-between", gap: "0.7rem" }}>
-                  <span>{theme}</span>
+                  <span>
+                    {value.name} <span className="muted">({theme})</span>
+                  </span>
                   <span className="muted">
                     {value.correct}/{value.total} ({accuracy}%)
                   </span>
@@ -79,7 +85,12 @@ export function ProgressPanel() {
           <div className="grid">
             {attempts.slice(0, 20).map((attempt) => (
               <div key={attempt.id} style={{ display: "flex", justifyContent: "space-between", gap: "0.7rem" }}>
-                <span style={{ maxWidth: "70%" }}>{attempt.questionText}</span>
+                <Link
+                  href={`/quiz?review=${encodeURIComponent(attempt.questionId)}&lang=${attempt.language}`}
+                  style={{ maxWidth: "70%", textDecoration: "underline", textUnderlineOffset: "2px" }}
+                >
+                  {attempt.questionText}
+                </Link>
                 <span style={{ color: attempt.isCorrect ? "#228658" : "#c94343" }}>
                   {attempt.isCorrect ? "Correct" : "Incorrect"}
                 </span>

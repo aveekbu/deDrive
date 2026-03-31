@@ -2,6 +2,14 @@ import enQuestionsRaw from "@/data/driving_theory_questions.json";
 import deQuestionsRaw from "@/data/driving_theory_questions_de.json";
 import type { Language, Question, QuestionFilter, RawOption, RawQuestion } from "@/lib/types";
 
+export type ThemeSummary = {
+  themeNumber: string;
+  themeName: string;
+  questionCount: number;
+  mediaCount: number;
+  coverImageUrl?: string;
+};
+
 function toOptionId(option: RawOption): string {
   return option.letter.replace(".", "").trim().toUpperCase();
 }
@@ -46,6 +54,32 @@ const QUESTIONS_BY_LANGUAGE: Record<Language, Question[]> = {
   de: DE_QUESTIONS,
 };
 
+function getThemeSortTokens(themeNumber: string): number[] {
+  const matches = themeNumber.match(/\d+/g);
+  if (!matches) {
+    return [Number.MAX_SAFE_INTEGER];
+  }
+
+  return matches.map((item) => Number.parseInt(item, 10));
+}
+
+function compareThemeNumbers(left: string, right: string): number {
+  const leftTokens = getThemeSortTokens(left);
+  const rightTokens = getThemeSortTokens(right);
+  const maxLength = Math.max(leftTokens.length, rightTokens.length);
+
+  for (let index = 0; index < maxLength; index += 1) {
+    const leftValue = leftTokens[index] ?? 0;
+    const rightValue = rightTokens[index] ?? 0;
+
+    if (leftValue !== rightValue) {
+      return leftValue - rightValue;
+    }
+  }
+
+  return left.localeCompare(right);
+}
+
 export function getQuestions(filter: QuestionFilter): Question[] {
   const questions = QUESTIONS_BY_LANGUAGE[filter.language];
 
@@ -70,8 +104,38 @@ export function getQuestionById(id: string, language: Language): Question | unde
   return QUESTIONS_BY_LANGUAGE[language].find((question) => question.id === id);
 }
 
+export function getThemeSummaries(language: Language): ThemeSummary[] {
+  const byTheme = new Map<string, ThemeSummary>();
+
+  for (const question of QUESTIONS_BY_LANGUAGE[language]) {
+    const existing = byTheme.get(question.themeNumber);
+    const hasMedia = question.imageUrls.length > 0 || question.videoUrls.length > 0;
+
+    if (existing) {
+      existing.questionCount += 1;
+      if (hasMedia) {
+        existing.mediaCount += 1;
+      }
+      if (!existing.coverImageUrl && question.imageUrls.length > 0) {
+        existing.coverImageUrl = question.imageUrls[0];
+      }
+      continue;
+    }
+
+    byTheme.set(question.themeNumber, {
+      themeNumber: question.themeNumber,
+      themeName: question.themeName,
+      questionCount: 1,
+      mediaCount: hasMedia ? 1 : 0,
+      coverImageUrl: question.imageUrls[0],
+    });
+  }
+
+  return [...byTheme.values()].sort((left, right) => compareThemeNumbers(left.themeNumber, right.themeNumber));
+}
+
 export function getThemeNumbers(language: Language): string[] {
-  return [...new Set(QUESTIONS_BY_LANGUAGE[language].map((question) => question.themeNumber))].sort();
+  return getThemeSummaries(language).map((theme) => theme.themeNumber);
 }
 
 export function getQuestionCounts(language: Language): { total: number; themes: number } {
