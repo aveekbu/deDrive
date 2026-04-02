@@ -6,12 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "translate:bn": "node scripts/generate-bn-questions.mjs",
+    "translate:bn:apply-cache": "node scripts/generate-bn-questions.mjs --apply-cache-only"
   },
   "dependencies": {
     "next": "16.2.1",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "translate-google": "^1.5.0",
     "zustand": "^5.0.12"
   },
   "devDependencies": {

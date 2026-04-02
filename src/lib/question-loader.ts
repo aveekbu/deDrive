@@ -1,5 +1,6 @@
 import enQuestionsRaw from "@/data/driving_theory_questions.json";
 import deQuestionsRaw from "@/data/driving_theory_questions_de.json";
+import bnQuestionsRaw from "@/data/driving_theory_questions_bn.json";
 import type { Language, Question, QuestionFilter, RawOption, RawQuestion } from "@/lib/types";
 
 export type ThemeSummary = {
@@ -48,10 +49,12 @@ function normalizeQuestion(item: RawQuestion, language: Language): Question {
 
 const EN_QUESTIONS = (enQuestionsRaw as RawQuestion[]).map((item) => normalizeQuestion(item, "en"));
 const DE_QUESTIONS = (deQuestionsRaw as RawQuestion[]).map((item) => normalizeQuestion(item, "de"));
+const BN_QUESTIONS = (bnQuestionsRaw as RawQuestion[]).map((item) => normalizeQuestion(item, "bn"));
 
 const QUESTIONS_BY_LANGUAGE: Record<Language, Question[]> = {
   en: EN_QUESTIONS,
   de: DE_QUESTIONS,
+  bn: BN_QUESTIONS,
 };
 
 function getThemeSortTokens(themeNumber: string): number[] {

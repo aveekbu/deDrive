@@ -1,4 +1,4 @@
-export type Language = "en" | "de";
+export type Language = "en" | "de" | "bn";
 
 export type RawOption = {
   letter: string;

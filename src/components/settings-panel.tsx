@@ -31,6 +31,13 @@ export function SettingsPanel() {
           >
             German
           </button>
+          <button
+            className="button secondary"
+            onClick={() => setLanguage("bn")}
+            style={{ borderColor: language === "bn" ? "var(--accent)" : undefined }}
+          >
+            বাংলা
+          </button>
         </div>
       </article>
 

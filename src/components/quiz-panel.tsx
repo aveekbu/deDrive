@@ -28,7 +28,7 @@ function setsEqual(left: Set<string>, right: Set<string>): boolean {
 }
 
 function isLanguage(value: string | null): value is Language {
-  return value === "en" || value === "de";
+  return value === "en" || value === "de" || value === "bn";
 }
 
 export function QuizPanel() {
@@ -42,6 +42,7 @@ export function QuizPanel() {
   const [reviewQuestion, setReviewQuestion] = useState<Question | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [revealed, setRevealed] = useState(false);
+  const [lastResult, setLastResult] = useState<boolean | null>(null);
 
   const activeQuestion = reviewQuestion ?? current;
 
@@ -122,6 +123,7 @@ export function QuizPanel() {
       timeTakenSeconds: startedAt ? Math.floor((Date.now() - startedAt) / 1000) : 0,
     });
 
+    setLastResult(isCorrect);
     setRevealed(true);
   }
 
@@ -129,11 +131,13 @@ export function QuizPanel() {
     if (reviewQuestion) {
       setSelected([]);
       setRevealed(false);
+      setLastResult(null);
       return;
     }
 
     setSelected([]);
     setRevealed(false);
+    setLastResult(null);
     nextQuestion();
   }
 
@@ -227,7 +231,7 @@ export function QuizPanel() {
           <QuestionCard question={activeQuestion} selected={selected} revealed={revealed} onToggle={toggleOption} />
           <article className="card" style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
             <button className="button primary" onClick={submitAnswer} disabled={selected.length === 0 || revealed}>
-              Check Answer
+              {revealed ? (lastResult ? "Correct" : "Wrong") : "Check Answer"}
             </button>
             {reviewQuestion ? (
               <button className="button secondary" onClick={goNext} disabled={!revealed}>
